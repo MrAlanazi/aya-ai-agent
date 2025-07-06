@@ -1,0 +1,161 @@
+{
+  "name": "AyaKayed_Agent_Extended",
+  "description": "Agent that learns from high-quality Intercom conversations (CX 8+) and Help Center articles, updates knowledge weekly, and responds like Aya Kayed with consistent tone.",
+  "created_at": "2025-07-06T10:10:06.077678Z",
+  "variables": {
+    "INTERCOM_ACCESS_TOKEN": "dG9rOmYwNGY4ZGMwXzI2NzRfNDllMl85YTg5XzQ1OWY2MDgyNzkxZDoxOjA="
+  },
+  "memory": {
+    "enabled": true,
+    "name": "chat_history",
+    "window": 5
+  },
+  "tools": [
+    {
+      "name": "gpt-4",
+      "type": "llm",
+      "provider": "openai",
+      "model": "gpt-4"
+    }
+  ],
+  "nodes": {
+    "start": {
+      "type": "input",
+      "next": "process"
+    },
+    "process": {
+      "type": "tool",
+      "tool_name": "gpt-4",
+      "input": {
+        "text": "العميل قال: {{ input.text }}. كيف يمكننا مساعدته؟"
+      },
+      "next": "end"
+    },
+    "end": {
+      "type": "output"
+    },
+    "fetch_intercom_conversations": {
+      "type": "tool",
+      "tool_name": "http_get_intercom",
+      "input": {
+        "url": "https://api.intercom.io/conversations",
+        "headers": {
+          "Authorization": "Bearer {{ INTERCOM_ACCESS_TOKEN }}",
+          "Accept": "application/json"
+        }
+      },
+      "next": "fetch_help_articles"
+    },
+    "fetch_help_articles": {
+      "type": "tool",
+      "tool_name": "http_get_helpcenter",
+      "input": {
+        "url": "https://intercom.help/rewaa/ar",
+        "headers": {
+          "Accept": "text/html"
+        }
+      },
+      "next": "process"
+    },
+    "filter_high_cx": {
+      "type": "tool",
+      "tool_name": "filter_high_cx",
+      "input": {
+        "min_score": 8,
+        "source": "{{ fetch_intercom_conversations.output }}"
+      },
+      "next": "fetch_help_articles"
+    },
+    "fetch_and_update_knowledge": {
+      "type": "tool",
+      "tool_name": "update_knowledge_base",
+      "input": {
+        "source": [
+          "intercom",
+          "help_center"
+        ],
+        "strategy": "merge_and_rank_by_relevance"
+      },
+      "next": "end"
+    }
+  },
+  "edges": [
+    {
+      "from": "start",
+      "to": "fetch_intercom_conversations"
+    },
+    {
+      "from": "fetch_intercom_conversations",
+      "to": "filter_high_cx"
+    },
+    {
+      "from": "filter_high_cx",
+      "to": "fetch_help_articles"
+    },
+    {
+      "from": "fetch_help_articles",
+      "to": "process"
+    },
+    {
+      "from": "process",
+      "to": "end"
+    },
+    {
+      "from": "weekly_auto_learning",
+      "to": "fetch_and_update_knowledge"
+    }
+  ],
+  "entry_point": "start",
+  "cron": [
+    {
+      "name": "weekly_auto_learning",
+      "schedule": "0 0 * * 0",
+      "task": "fetch_and_update_knowledge"
+    }
+  ],
+  "dashboard": {
+    "metrics": [
+      {
+        "name": "AI_Response_Rate",
+        "description": "نسبة المحادثات التي رد عليها الوكيل تلقائيًا",
+        "calculation": "AI_Replies / Total_Conversations"
+      },
+      {
+        "name": "CSAT_Score",
+        "description": "متوسط تقييم رضا العملاء بعد رد AI",
+        "calculation": "Sum(CSAT_Scores) / Count(CSAT_Responses)"
+      },
+      {
+        "name": "Resolution_Rate",
+        "description": "نسبة حل المحادثات دون تصعيد بشري",
+        "calculation": "Resolved_By_AI / Total_AI_Conversations"
+      },
+      {
+        "name": "Escalation_Rate",
+        "description": "نسبة المحادثات التي تم تحويلها من AI إلى بشر",
+        "calculation": "Escalated_To_Human / Total_AI_Conversations"
+      },
+      {
+        "name": "Error_Frequency",
+        "description": "عدد الأخطاء الحرجة أو الفشل في الرد",
+        "calculation": "AI_Errors / Total_AI_Conversations"
+      }
+    ],
+    "qa_feedback_tracking": {
+      "enabled": true,
+      "fields": [
+        "clarity",
+        "accuracy",
+        "professionalism",
+        "adherence_to_style",
+        "critical_errors"
+      ]
+    },
+    "ui_panels": [
+      "recent_failures",
+      "conversation_routing_stats",
+      "customer_feedback_distribution",
+      "trending_issues"
+    ]
+  }
+}
