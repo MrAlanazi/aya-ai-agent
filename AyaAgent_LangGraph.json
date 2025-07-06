@@ -1,0 +1,16 @@
+{
+  "name": "AyaKayed_Agent",
+  "description": "AI Agent replicating Aya Kayed's behavior using Intercom data and Help Center knowledge",
+  "nodes": [],
+  "edges": [],
+  "memory": {
+    "enabled": true,
+    "name": "chat_history",
+    "window": 5
+  },
+  "variables": {
+    "INTERCOM_ACCESS_TOKEN": "{{ your_intercom_token }}"
+  },
+  "tools": [],
+  "cron": []
+}
